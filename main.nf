@@ -22,10 +22,13 @@ def print_help = {
 }
 
 script_dir = "src"
+lib_dir = "lib"
 
 extract_barcode_src = Channel.fromPath("${script_dir}/mapping_extract_barcodes.py")
 barcode_seqnames_src = Channel.fromPath("${script_dir}/mapping_barcode_seqnames.py")
 best_assignment_src = Channel.fromPath("${script_dir}/mapping_best_assignment.py")
+rnaseq_tpm_src = Channel.fromPath("${script_dir}/rnaseq_tpm.py")
+rlibs_src = Channel.fromPath("${lib_dir}/*.R")
 
 
 // Set defaults
@@ -36,6 +39,7 @@ params.help        = false
 params.metadata    = null
 params.datadir     = null
 params.index       = null
+params.kindex      = null
 params.assembly    = null
 params.genome      = null
 
@@ -106,7 +110,7 @@ index_files.close()
 ** biological replicate,technical replicate,DNA index,file/URL/{SRR,ERR,DRR} reference
 */
 
-def options = ['bfs':null, 'ltr':null, 'rfs':null, 'dist':null, 'mapq':null, 'intq':null]
+def options = ['bfs':null, 'ltr':null, 'rfs':null, 'dist':null, 'mapq':null, 'intq':null, 'gene_annotation':null, 'transcripts_url':null, 'rnalen_mean':null, 'rnalen_sd':null]
 
 if (!params.metadata) {
    log.info 'error: metadata file not specified!'
@@ -224,7 +228,7 @@ mfile.eachLine { line ->
 }
 
 // Parse options
-if (!options['bfs'] || !options['ltr'] || !options['dist']) {
+if (!options['bfs'] || !options['ltr'] || !options['dist'] || !options['gene_annotation']) {
    log.info "error: 'bfs', 'ltr' and 'dist' options must be defined in $params.metadata before 'ipcr:', 'dna:' and 'rna:'"
    exit 1
 }
@@ -302,6 +306,182 @@ datasets.subscribe onNext: { files, info ->
    pcrs.close()
 }
 
+
+/**********************************************************************
+*************************** RNASEQ PIPELINE ***************************
+**********************************************************************/
+
+gtf_url = Channel.create()
+annotation_file = Channel.create()
+
+// 0. Get human gene annotations
+if (options['gene_annotation']) {
+   gene_path = options['gene_annotation']
+   f = file("$gene_path")
+   // Check whether it is url or file.
+   if (gene_path =~ /^http|^ftp/) {   
+      gtf_url << gene_path
+   } else if (f.isFile()) {
+      annotation_file << f
+      annotation_file.close()
+   } else {
+      log.info "error: gene annotation file (gtf) not found: ${f}"
+   }
+} else {
+   log.info "error: gene annotation option 'gene_annotation' not found in metadata! Specify either a http/ftp url or a path to a local file."
+}
+gtf_url.close()
+
+process getGTFannotation {
+   // Process options
+   tag "${url}"
+   // Cluster options
+   cpus 1
+   memory '2GB'
+
+   input:
+   val url from gtf_url
+   
+   output:
+   file '*.gtf' into annotation_file
+
+   script:
+   """
+   wget ${url} -O annotation.gtf
+   """
+}
+
+// 1. Find/Create kallisto index
+kallisto_index = Channel.create()
+cdna_url       = Channel.create()
+
+// Find kallisto index
+if (params.kindex) {
+   // Check bwa index files.
+   kindex_ref = file("${params.kindex}")
+   if (kindex_ref.isFile()) {
+      kallisto_index << kindex_ref
+      kallisto_index.close()
+   } else if (options['transcripts_url'] != null) {
+      kindex_ref.toFile().createNewFile()
+      kindex_path << kindex_ref
+      cdna_url << options['transcripts_url']
+   } else {
+      log.info "error: kallisto index not found in '${params.kindex}'."
+      exit 1
+   }
+   cdna_url.close()
+} else {
+   log.info "error: '--kindex' option not specified."
+   exit 1
+}
+
+process buildKallistoIndex {
+   // Process options
+   tag "${kpath}"
+   // Cluster options
+   cpus 1
+   memory '32GB'
+
+   input:
+   file kpath from kindex_path
+   val  url   from cdna_url
+   output:
+   file kpath into kallisto_index
+   script:
+     """
+     wget ${url} -O - | zcat -f | awk 'BEGIN{p=0; IGNORECASE=1;} {
+       if($1 ~ /^>/) {
+         split($0,chr,":");
+         if (chr[4] ~ /^[MYX0-9][T0-9]*/) { p = 1; }
+         else { p = 0; } 
+       } 
+       if (p == 1) { print $0; }
+     }' > transcripts.fasta
+     kalisto index -i ${kindex_path} transcripts.fasta
+     """
+}
+
+// 2. Create abundance.tsv files
+process processRNASeq {
+   // Process options
+   tag "${reads}"
+   // Cluster options
+   cpus 12
+   memory '2GB'
+
+   input:
+   file kindex from kallisto_index.first()
+   set file(reads), sample from rseq
+   
+   output:
+   set file('abundance.tsv'), sample into rnaseq_tsv
+
+   script:
+   """
+   kallisto quant --bias -l ${options['rnalen_mean']} -s ${options['rnalen_sd']} --single -t ${task.cpus} -i ${kindex} -o . ${reads}
+   """
+}
+
+// 3. Compute tpm with script
+process TSVtoTPM {
+   // Process options
+   tag "${sample[1]}"
+   publishDir path:"${params.out}/expression/rnaseq/", mode:'symlink'
+   // Cluster options
+   cpus 1
+   memory '4GB'
+   
+   input:
+   set file(tsvfile), sample from rnaseq_tsv
+   file humangtf from annotation_file
+   file script from rnaseq_tpm_src.first()
+   output:
+   file ('*.tpm') into rnaseq_tpm
+
+   script:
+   """
+   python ${script} --gtf ${humangtf} ${tsvfile} | sort -k1,1 > rnaseq_${sample[1]}.tpm
+   """
+}
+
+// 4. Figures
+process rnaCorPlots {
+   // Process options
+   tag ""
+   publishDir path:"${params.out}/expression/figures/", mode:'move'
+   // Cluster options
+   cpus 1
+   memory '4GB'
+
+   input:
+   file libs from rlibs_src.first()
+   rnaseq_tpm.flatten().toList()
+   output:
+   file '*.pdf' into rnaseq_figures
+
+   script:
+   """ 
+   #!/usr/bin/env 
+   source('corplot.R')
+   files = Sys.glob('*.tpm')
+   nf = length(files)
+   if (nf == 0) {
+      quit(save='no', status=0)
+   }
+   rnacol = read.table(files[1])$V2
+   data = matrix(data=NA,nrow=length(rnacol),ncol=nf)
+   data[,1] = rnacol
+   i = 2
+   while (i <= nf) {
+      data[,i] = read.table(files[i])$V2
+   }
+   data <- as.data.frame(data)
+   pdf('rnaseq_corplot.pdf', useDingbats=F, width=18, height=18)
+   corplot(data)
+   dev.off()
+   """
+}
 
 /**********************************************************************
 **************************** IPCR PIPELINE ****************************
