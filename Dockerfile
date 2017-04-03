@@ -14,8 +14,11 @@ RUN apt-get update -qq &&   \
             libbz2-dev      \
             liblzma-dev     \
             libncurses5-dev \
-            libfuse-dev &&  \
-    apt-get clean &&        \
+            libfuse-dev     \
+            r-base          \
+            r-recommended   \
+            cmake           \
+    && apt-get clean &&     \
     rm -rf /var/lib/apt/lists*
 RUN cd / && \
     git clone https://github.com/lh3/bwa && \
@@ -49,7 +52,7 @@ RUN cd / && \
     git checkout 2255df95d51536be70708c65dc7c5f83bda4be7a && \
     make && \
     ln -s /starcode/starcode /usr/local/bin/starcode
-RUN cd / &&
+RUN cd / && \
     git clone https://github.com/pachterlab/kallisto && \
     cd kallisto && \
     git checkout 1e0e11288558ad88af198ec4f5302129c249b44f && \
