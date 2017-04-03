@@ -1,0 +1,20 @@
+# RNA-seq options
+rnalen_mean = 300
+rnalen_sd   = 100
+
+# Annotations
+# gene_annotation: gtf gene annotation file or URL.
+# gene_annotation = ftp://ftp.ensembl.org/pub/release-75/gtf/homo_sapiens/Homo_sapiens.GRCh37.75.gtf.gz
+#
+# transcripts: transcript file or URL. Optional, since this file is only used to build the kallisto index.
+# transcripts = http://ftp.ensembl.org/pub/grch37/release-81/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh37.75.cdna.all.fa.gz
+
+gene_annotation = ftp://ftp.ensembl.org/pub/release-75/gtf/homo_sapiens/Homo_sapiens.GRCh37.75.gtf.gz
+transcripts = http://ftp.ensembl.org/pub/grch37/release-81/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh37.75.cdna.all.fa.gz
+
+# RNA-SEQ SAMPLES, format:
+# datasets:
+# replicate, file/URL/{SRR,ERR,DRR} reference
+datasets:
+1,SRR4114684
+2,SRR4114685
