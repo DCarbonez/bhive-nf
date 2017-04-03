@@ -324,7 +324,7 @@ process filterRecombinants {
    script:
    py_args = (options['mapq'] ? "-q ${options['mapq']} " : "") + (options['intq'] ? "--min-score ${options['intq']}" : "")
    """
-   python ${script} ${py_args} <(samtools view ${raw_integs}) > ipcr_integs_${sample}.txt
+   python ${script} ${py_args} <(samtools view ${raw_integs}) > ipcr_integs_${sample[0]}.txt
    """
 }
 
@@ -341,7 +341,7 @@ process mergeIntegs {
    file(finteg) from integ_list.flatten().toSortedList()
 
    output:
-   file "ipcr_integs_nonfiltered.txt" into integ_file
+   file "ipcr_integs.txt" into integ_file
    
    script:
 """
@@ -377,10 +377,10 @@ process removeDuplicates {
 max_dist = 100
 integs = {}
 with open('${integs}','r') as f:
-  for line if:
+  for line in f:
     if line[0] == '#' or line[0:4] == 'brcd': continue
     [brcd,chr,locus] = line.split('\t')[0:3]
-    if !integs.haskey(brcd):
+    if not integs.has_key(brcd):
       integs[brcd] = [chr,int(locus),line]
     else:
       if len(integs[brcd]) == 1: continue
