@@ -1,0 +1,30 @@
+# BHIVE expression pipeline options:
+#  bfs: Barcode flanking sequence, the sequence that precedes the barcode in the HIV construct
+
+bfs = TATAGTGAGTCGTA
+
+# EXPRESSION SAMPLES, format:
+# dna:
+# biological replicate, technical replicate, [{SRR,ERR,DRR} reference or [file] or [URL]]
+#
+# rna:
+# biological replicate, technical replicate, [{SRR,ERR,DRR} reference or [file] or [URL]]
+#
+# Example,
+# dna:
+# 1,1,data/bhive_pcr_1.fastq.gz
+# 1,2,SRR8447752
+# 2,1,ftp://ftp.someserver.org/files/file_pcr1.fastq.gz
+# 2,2,http://www.someserver.org/files/file_pcr2.fastq.gz
+
+dna:
+1,1,ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR361/007/SRR3614677/SRR3614677.fastq.gz
+1,2,ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR361/008/SRR3614678/SRR3614678.fastq.gz
+2,1,ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR361/009/SRR3614679/SRR3614679.fastq.gz
+2,2,ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR361/000/SRR3614680/SRR3614680.fastq.gz
+
+rna:
+1,1,ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR361/001/SRR3614681/SRR3614681.fastq.gz
+1,2,ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR361/002/SRR3614682/SRR3614682.fastq.gz
+2,1,ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR361/003/SRR3614683/SRR3614683.fastq.gz
+2,2,ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR361/004/SRR3614684/SRR3614684.fastq.gz
