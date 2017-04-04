@@ -390,6 +390,7 @@ with open('${integs}','r') as f:
           integs[brcd] = [0]
 
 with open('hiv_integrations.txt','w+') as fout:
+  fout.write('brcd\\tchr\\tlocus\\tstrand\\treads\\tmapq\\trep\\n')
   for v in integs.values():
     if len(v) > 1:
       fout.write(v[2])
