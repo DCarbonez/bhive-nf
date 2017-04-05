@@ -20,6 +20,7 @@ RUN apt-get update -qq &&   \
             cmake           \
     && apt-get clean &&     \
     rm -rf /var/lib/apt/lists*
+RUN R -e 'source("http://bioconductor.org/biocLite.R"); biocLite("GenomicRanges")'
 RUN cd / && \
     git clone https://github.com/lh3/bwa && \
     cd bwa && \
