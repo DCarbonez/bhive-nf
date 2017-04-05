@@ -4,7 +4,7 @@ def print_help = {
     log.info '-----------------------------------'
     log.info ''
     log.info 'Usage: '
-    log.info '    expression.nf --index BWA_INDEX [optional arguments]'
+    log.info '    expression.nf --integs HIV_INTEGS [optional arguments]'
     log.info ''
     log.info 'Computes HIV expression from PCR and RT-PCR reads.'
     log.info 'Additional params, such as datasets for each replicate,'
