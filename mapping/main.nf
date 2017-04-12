@@ -149,10 +149,10 @@ mfile.eachLine { line ->
         if (t[1] =~ /^http|^ftp/ && t[2] =~ /^http|^ftp/) {
            file_getref << tuple([t[-2],t[-1]],t[0])
         } else {
-           read1 = file("$t[-2]")
-           read2 = file("$t[-1]")
+           read1 = file("${t[-2]}")
+           read2 = file("${t[-1]}")
            if (read1.isFile() && read2.isFile()) {
-              datasets_ << tuple([read1,read2],t[0])
+              datasets << tuple([read1,read2],t[0])
            } else {
               log.info "error: iPCR files not found, in '$line'. (URLs must start with http/ftp)"
               exit 1
