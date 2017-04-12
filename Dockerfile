@@ -7,6 +7,11 @@ RUN apt-get update -qq &&   \
             gzip            \
             python          \
             python-dev      \
+            python-pip      \
+            python-numpy    \
+            python-scipy    \
+            python-pandas   \
+            python-h5py     \
             zlib1g-dev      \
             libxml2-dev     \
             libmagic-dev    \
@@ -17,6 +22,8 @@ RUN apt-get update -qq &&   \
             libfuse-dev     \
             r-base          \
             r-recommended   \
+            tabix           \
+            pigz            \
             cmake           \
     && apt-get clean &&     \
     rm -rf /var/lib/apt/lists*
@@ -77,3 +84,4 @@ RUN wget https://github.com/samtools/samtools/releases/download/1.3.1/samtools-1
     cd samtools-1.3.1 && \
     ./configure && \
     make && make install
+RUN pip install cooler
